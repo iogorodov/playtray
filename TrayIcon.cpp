@@ -1,8 +1,8 @@
 #include "stdafx.h"
 #include "TrayIcon.h"
 
-#define MAX_LOADSTRING 128
 #define ICONS_IDS { IDI_PLAY, IDI_STOP, IDI_PLAY_ERROR, IDI_LOADING_01, IDI_LOADING_02, IDI_LOADING_03, IDI_LOADING_04 }
+#define PHASE_DELAY 100
 
 std::wstring LoadStringFromResource(UINT id, HINSTANCE instance = NULL)
 {
@@ -42,7 +42,14 @@ HICON TrayIcon::GetIcon(State state, int phase)
     case ERROR_ICON:
         return _icons[2];
     case LOADING_ICON:
-        return _icons[phase % 4 + 3];
+        if (phase < 4) 
+        {
+            return _icons[phase % 4 + 3];
+        }
+        else
+        {
+            return _icons[11 - phase % 6];
+        }
     }
 
     return 0;
@@ -96,6 +103,18 @@ bool TrayIcon::SetIcon(State state, int phase, const std::wstring& tooltip, bool
     return true;
 }
 
+int TrayIcon::GetNextPhase()
+{
+    DWORD tick = GetTickCount();
+    _tickSpent += tick - _lastTick;
+
+    const int count = _tickSpent / PHASE_DELAY;
+    _tickSpent = _tickSpent % PHASE_DELAY;
+    _lastTick = tick;
+
+    return (_phase + count) % 6;
+}
+
 bool TrayIcon::Init(HINSTANCE instance, HWND wnd)
 {
     _wnd = wnd;
@@ -145,8 +164,26 @@ void TrayIcon::SetErrorIcon(int errorCode)
     SetIcon(ERROR_ICON, 0, LoadStringFromResource(errorCode - BASS_OK + IDS_BASS_OK), false);
 }
 
-void TrayIcon::SetLoading(int percent)
+void TrayIcon::SetLoading()
 {
-    std::wstring empty;
-    SetIcon(LOADING_ICON, 0, empty, false);
+    if (_state != LOADING_ICON)
+    {
+        _lastTick = GetTickCount();
+        _tickSpent = 0;
+    }
+
+    SetIcon(LOADING_ICON, 1, _tooltip, false);
+}
+
+void TrayIcon::UpdateLoading()
+{
+    SetIcon(LOADING_ICON, GetNextPhase(), _tooltip, false);
+}
+
+void TrayIcon::UpdateLoading(int percent)
+{
+    const std::wstring& buffering = LoadStringFromResource(IDS_BUFFERING);
+    wchar_t buffer[128];
+    swprintf_s(buffer, buffering.c_str(), percent);
+    SetIcon(LOADING_ICON, GetNextPhase(), buffer, false);
 }

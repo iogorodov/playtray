@@ -11,6 +11,8 @@ static const WCHAR* WINDOW_CLASS = L"PLAYTRAY_WND_CLASS";
 #define SHELL_ICON_UID 100
 #define	WM_USER_SHELLICON WM_USER + 1
 
+#define TIMER_ID 0
+
 LRESULT CALLBACK App::StaticWndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     if (message == WM_NCCREATE)
@@ -29,7 +31,8 @@ LRESULT CALLBACK App::StaticWndProc(HWND wnd, UINT message, WPARAM wParam, LPARA
 App::App(HINSTANCE instance) :
     _instance(nullptr),
     _trayIcon(SHELL_ICON_UID, WM_USER_SHELLICON),
-    _player(this)
+    _player(this),
+    _hasTimer(false)
 {
     WCHAR titleStr[MAX_LOADSTRING];
     LoadStringW(instance, IDS_APP_TITLE, titleStr, MAX_LOADSTRING);
@@ -76,6 +79,7 @@ App::App(HINSTANCE instance) :
 
     _player.Init(wnd);
     _instance = instance;
+    _wnd = wnd;
 }
 
 bool App::AddMenuItem(HMENU menu, UINT position, UINT id, LPWSTR title, BOOL disabled, BOOL checked)
@@ -135,6 +139,21 @@ bool App::ShowTrayMenu(HWND wnd)
     return true;
 }
 
+void App::StartTimer()
+{
+    if (_hasTimer)
+        return;
+    SetTimer(_wnd, TIMER_ID, USER_TIMER_MINIMUM, 0);
+    _hasTimer = true;
+}
+
+void App::StopTimer()
+{
+    KillTimer(_wnd, TIMER_ID);
+    _hasTimer = false;
+}
+
+
 int App::Run()
 {
     if (!_instance)
@@ -162,27 +181,35 @@ long App::WndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
     switch (message)
     {
         case WM_COMMAND:
-        {
-            int commandId = LOWORD(wParam);
-            if (commandId >= IDM_MENU_ITEM)
             {
-                size_t position = commandId - IDM_MENU_ITEM;
-                if (_config.SetCurrentIndex(position))
-                    _player.Play(_config.GetUrl(position));
-            }
-            else
-            {
-                switch (commandId)
+                int commandId = LOWORD(wParam);
+                if (commandId >= IDM_MENU_ITEM)
                 {
-                case IDM_EXIT:
-                    DestroyWindow(wnd);
-                    break;
-                default:
-                    return DefWindowProc(wnd, message, wParam, lParam);
+                    size_t position = commandId - IDM_MENU_ITEM;
+                    if (_config.SetCurrentIndex(position))
+                    {
+                        _player.Play(_config.GetUrl(position));
+                        _trayIcon.SetLoading();
+                        StartTimer();
+                    }
+                }
+                else
+                {
+                    switch (commandId)
+                    {
+                    case IDM_EXIT:
+                        DestroyWindow(wnd);
+                        break;
+                    default:
+                        return DefWindowProc(wnd, message, wParam, lParam);
+                    }
                 }
             }
-        }
         break;
+        case WM_TIMER:
+            if (!_player.Update())
+                _trayIcon.UpdateLoading();
+            break;
         case WM_USER_SHELLICON:
             switch (LOWORD(lParam))
             {
@@ -194,6 +221,8 @@ long App::WndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
                     else if (!_config.GetItems().empty())
                     {
                         _player.Play(_config.GetUrl(_config.GetCurrentIndex()));
+                        _trayIcon.SetLoading();
+                        StartTimer();
                     }
                     break;
                 case WM_RBUTTONDOWN:
@@ -220,16 +249,18 @@ long App::WndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
 
 void App::OnBuffer(int percent)
 {
-
+    _trayIcon.UpdateLoading(percent);
 }
 
 void App::OnPlay(const std::wstring& name, const std::wstring& url)
 {
     _trayIcon.SetStopIcon(url);
+    StopTimer();
 }
 
 void App::OnMeta(const std::wstring& text, const std::wstring& artist)
 {
+    StopTimer();
     if (artist.empty())
     {
         _trayIcon.SetStopIcon(text);
@@ -242,11 +273,13 @@ void App::OnMeta(const std::wstring& text, const std::wstring& artist)
 
 void App::OnStall()
 {
-
+    _trayIcon.SetLoading();
+    StartTimer();
 }
 
 void App::OnEnd()
 {
+    StopTimer();
     if (_config.GetItems().empty())
     {
         _trayIcon.SetPlayIcon(std::wstring());
@@ -259,6 +292,7 @@ void App::OnEnd()
 
 void App::OnError(int errorCode)
 {
+    StopTimer();
     _trayIcon.SetErrorIcon(errorCode);
 }
 

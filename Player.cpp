@@ -126,8 +126,6 @@ void Player::OpenUrl(const std::wstring& url)
         _callbacks->OnError(BASS_ErrorGetCode());
     }
     else {
-        _callbacks->OnBuffer(0);
-
         BASS_ChannelSetSync(_stream, BASS_SYNC_META, 0, Player::StaticMetaSync, this); // Shoutcast
         BASS_ChannelSetSync(_stream, BASS_SYNC_OGG_CHANGE, 0, Player::StaticMetaSync, this); // Icecast/OGG
         BASS_ChannelSetSync(_stream, BASS_SYNC_HLS_SEGMENT, 0, Player::StaticMetaSync, this); // HLS
@@ -143,11 +141,11 @@ void Player::OpenUrl(const std::wstring& url)
 void Player::ProcessMeta()
 {
     std::wstring empty;
-    std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
 
     const char *meta = BASS_ChannelGetTags(_stream, BASS_TAG_META);
     if (meta) 
     { // got Shoutcast metadata
+        std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
         const char *p = strstr(meta, "StreamTitle='"); // locate the title
         if (p) 
         {
@@ -163,6 +161,7 @@ void Player::ProcessMeta()
     }
     else 
     {
+        std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
         meta = BASS_ChannelGetTags(_stream, BASS_TAG_OGG);
         if (meta) 
         { // got Icecast/OGG tags
@@ -187,6 +186,7 @@ void Player::ProcessMeta()
         }
         else 
         {
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
             meta = BASS_ChannelGetTags(_stream, BASS_TAG_HLS_EXTINF);
             if (meta) 
             { // got HLS segment info
@@ -202,6 +202,9 @@ void Player::ProcessMeta()
 
 bool Player::Update()
 {
+    if (_stream == 0)
+        return false;
+
     if (BASS_ChannelIsActive(_stream) == BASS_ACTIVE_PLAYING) 
     {
         const char *icy = BASS_ChannelGetTags(_stream, BASS_TAG_ICY);
@@ -212,7 +215,7 @@ bool Player::Update()
         std::wstring url;
 
         if (icy) {
-            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
+            std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
 
             for (; *icy; icy += strlen(icy) + 1) {
                 if (!_strnicmp(icy, "icy-name:", 9))
@@ -226,10 +229,14 @@ bool Player::Update()
         ProcessMeta();
         return true;
     }
-    else {
+    else 
+    {
         QWORD percent = 100 - BASS_StreamGetFilePosition(_stream, BASS_FILEPOS_BUFFERING);
         if (percent > 0)
+        {
             _callbacks->OnBuffer((int)percent);
+            return true;
+        }
 
         return false;
     }

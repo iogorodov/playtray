@@ -19,10 +19,15 @@ class TrayIcon
     int _phase;
     std::wstring _tooltip;
 
+    DWORD _lastTick;
+    DWORD _tickSpent;
+
     HICON _icons[7];
 
     HICON GetIcon(State state, int phase);
     bool SetIcon(State state, int phase, const std::wstring& tooltip, bool create);
+    int GetNextPhase();
+
 public:
     TrayIcon(UINT iconUid, UINT messageId);
     ~TrayIcon();
@@ -33,6 +38,9 @@ public:
     void SetPlayIcon(const std::wstring& title);
     void SetStopIcon(const std::wstring& text);
     void SetErrorIcon(int errorCode);
-    void SetLoading(int percent);
+    void SetLoading();
+    
+    void UpdateLoading();
+    void UpdateLoading(int percent);
 };
 

@@ -7,16 +7,21 @@
 class App : Player::ICallbacks
 {
     HINSTANCE _instance;
+    HWND _wnd;
 
     TrayIcon _trayIcon;
     Config _config;
     Player _player;
+    bool _hasTimer;
 
     static LRESULT CALLBACK StaticWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
     LRESULT WndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam);
 
     bool AddMenuItem(HMENU menu, UINT position, UINT id, LPWSTR title, BOOL disabled, BOOL checked);
     bool ShowTrayMenu(HWND wnd);
+
+    void StartTimer();
+    void StopTimer();
 
 public:
     App(HINSTANCE instance);
