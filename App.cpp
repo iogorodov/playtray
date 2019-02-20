@@ -73,6 +73,7 @@ App::App(HINSTANCE instance) :
     _config.Read();
     _player.Init(wnd);
 
+    _trayIcon.SetPlayIcon(_config.GetItems()[_config.GetCurrentIndex()]);
     _instance = instance;
 }
 
@@ -164,8 +165,9 @@ long App::WndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
             int commandId = LOWORD(wParam);
             if (commandId >= IDM_MENU_ITEM)
             {
-                int position = commandId - IDM_MENU_ITEM;
-                _player.Play(_config.GetUrl(position));
+                size_t position = commandId - IDM_MENU_ITEM;
+                if (_config.SetCurrentIndex(position))
+                    _player.Play(_config.GetUrl(position));
             }
             else
             {
@@ -217,7 +219,14 @@ void App::OnPlay(const std::wstring& name, const std::wstring& url)
 
 void App::OnMeta(const std::wstring& text, const std::wstring& artist)
 {
-    _trayIcon.SetStopIcon(text);
+    if (artist.empty())
+    {
+        _trayIcon.SetStopIcon(text);
+    }
+    else
+    {
+        _trayIcon.SetStopIcon(artist + L" - " + text);
+    }
 }
 
 void App::OnStall()
@@ -227,13 +236,18 @@ void App::OnStall()
 
 void App::OnEnd()
 {
-    std::wstring empty;
-    _trayIcon.SetPlayIcon(empty);
+    if (_config.GetItems().empty())
+    {
+        _trayIcon.SetPlayIcon(std::wstring());
+    }
+    else
+    {
+        _trayIcon.SetPlayIcon(_config.GetItems()[_config.GetCurrentIndex()]);
+    }
 }
 
 void App::OnError(int errorCode)
 {
-    std::wstring empty;
-    _trayIcon.SetErrorIcon(empty);
+    _trayIcon.SetErrorIcon(errorCode);
 }
 

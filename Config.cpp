@@ -26,6 +26,15 @@ void Config::Read()
     }
 }
 
+bool Config::SetCurrentIndex(size_t index)
+{
+    if (index < 0 || index >= _names.size())
+        return false;
+
+    _currentIndex = index;
+    return true;
+}
+
 const std::wstring& Config::GetUrl(size_t index) const
 {
     static std::wstring empty;

@@ -12,7 +12,7 @@ public:
 
     void Read();
 
-    void SetCurrentIndex(int index) { _currentIndex = index; }
+    bool SetCurrentIndex(size_t index);
 
     const std::vector<std::wstring>& GetItems() const { return _names; }
     size_t GetCurrentIndex() const { return _currentIndex; }

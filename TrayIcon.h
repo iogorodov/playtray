@@ -32,7 +32,7 @@ public:
 
     void SetPlayIcon(const std::wstring& title);
     void SetStopIcon(const std::wstring& text);
-    void SetErrorIcon(const std::wstring& text);
+    void SetErrorIcon(int errorCode);
     void SetLoading(int percent);
 };
 

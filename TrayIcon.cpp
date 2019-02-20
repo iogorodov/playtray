@@ -2,7 +2,7 @@
 #include "TrayIcon.h"
 
 #define MAX_LOADSTRING 128
-#define ICONS_IDS { IDI_PLAY, IDI_STOP, IDI_ERROR, IDI_LOADING_01, IDI_LOADING_02, IDI_LOADING_03, IDI_LOADING_04 }
+#define ICONS_IDS { IDI_PLAY, IDI_STOP, IDI_PLAY_ERROR, IDI_LOADING_01, IDI_LOADING_02, IDI_LOADING_03, IDI_LOADING_04 }
 
 std::wstring LoadStringFromResource(UINT id, HINSTANCE instance = NULL)
 {
@@ -125,7 +125,14 @@ void TrayIcon::RemoveIcon()
 
 void TrayIcon::SetPlayIcon(const std::wstring& title)
 {
-    SetIcon(PLAY_ICON, 0, title, false);
+    if (title.empty())
+    {
+        SetIcon(PLAY_ICON, 0, LoadStringFromResource(IDS_APP_TITLE), false);
+    }
+    else
+    {
+        SetIcon(PLAY_ICON, 0, LoadStringFromResource(IDS_APP_TITLE) + L" - " + title, false);
+    }
 }
 
 void TrayIcon::SetStopIcon(const std::wstring& text)
@@ -133,9 +140,9 @@ void TrayIcon::SetStopIcon(const std::wstring& text)
     SetIcon(STOP_ICON, 0, text, false);
 }
 
-void TrayIcon::SetErrorIcon(const std::wstring& text)
+void TrayIcon::SetErrorIcon(int errorCode)
 {
-    SetIcon(ERROR_ICON, 0, text, false);
+    SetIcon(ERROR_ICON, 0, LoadStringFromResource(errorCode - BASS_OK + IDS_BASS_OK), false);
 }
 
 void TrayIcon::SetLoading(int percent)
