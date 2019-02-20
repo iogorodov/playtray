@@ -29,7 +29,7 @@ void CALLBACK Player::StaticStallSync(HSYNC handle, DWORD channel, DWORD data, v
 
 void CALLBACK Player::StaticEndSync(HSYNC handle, DWORD channel, DWORD data, void *user)
 {
-    ((Player*)user)->_callbacks->OnEnd();
+    ((Player*)user)->Stop();
 }
 
 void CALLBACK Player::StaticStatusProc(const void *buffer, DWORD length, void *user)
@@ -54,7 +54,7 @@ bool Player::Init(HWND wnd)
 {
     if (HIWORD(BASS_GetVersion()) != BASSVERSION)
     {
-        _callbacks->OnError(-1);
+        _callbacks->OnError(BASS_ERROR_VERSION);
         return false;
     }
 
@@ -92,6 +92,7 @@ void Player::Stop()
 {
     if (_stream)
         BASS_StreamFree(_stream);
+    _callbacks->OnEnd();
     _stream = 0;
 }
 

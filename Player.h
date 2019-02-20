@@ -55,6 +55,7 @@ public:
 
     void Play(const std::wstring& url);
     void Stop();
+    bool IsPlaying() const { return _stream != 0; }
 
     bool Update();
 };

@@ -71,9 +71,10 @@ App::App(HINSTANCE instance) :
         return;
 
     _config.Read();
-    _player.Init(wnd);
+    if (!_config.GetItems().empty())
+        _trayIcon.SetPlayIcon(_config.GetItems()[_config.GetCurrentIndex()]);
 
-    _trayIcon.SetPlayIcon(_config.GetItems()[_config.GetCurrentIndex()]);
+    _player.Init(wnd);
     _instance = instance;
 }
 
@@ -185,6 +186,16 @@ long App::WndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
         case WM_USER_SHELLICON:
             switch (LOWORD(lParam))
             {
+                case WM_LBUTTONDOWN:
+                    if (_player.IsPlaying())
+                    {
+                        _player.Stop();
+                    }
+                    else if (!_config.GetItems().empty())
+                    {
+                        _player.Play(_config.GetUrl(_config.GetCurrentIndex()));
+                    }
+                    break;
                 case WM_RBUTTONDOWN:
                     if (!ShowTrayMenu(wnd))
                         return -1;
@@ -197,8 +208,8 @@ long App::WndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
             break;
         
         case WM_DESTROY:
-            _trayIcon.RemoveIcon();
             _player.Destroy();
+            _trayIcon.RemoveIcon();
             PostQuitMessage(0);
             break;
         default:
