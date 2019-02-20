@@ -11,7 +11,7 @@ Config::Config() :
 
 void Config::Read()
 {
-    std::ifstream file(L"radiotray.json");
+    std::ifstream file(L"playtray.json");
     if (!file.is_open())
         return;
 

@@ -42,6 +42,24 @@
     <Image Include="resources\playtray.ico">
       <Filter>resources</Filter>
     </Image>
+    <Image Include="resources\error.ico">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\loading_01.ico">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\loading_02.ico">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\loading_03.ico">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\loading_04.ico">
+      <Filter>resources</Filter>
+    </Image>
+    <Image Include="resources\stop.ico">
+      <Filter>resources</Filter>
+    </Image>
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resources\playtray.rc">

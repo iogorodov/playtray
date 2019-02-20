@@ -23,10 +23,10 @@ public:
 
     int Run();
 
-    void OnBuffer(int percent) override {};
-    void OnPlay(const std::wstring& name, const std::wstring& url) override {};
-    void OnMeta(const std::wstring& text, const std::wstring& artist) override {};
-    void OnStall() override {};
-    void OnEnd() override {};
-    void OnError(int errorCode) override {};
+    void OnBuffer(int percent) override;
+    void OnPlay(const std::wstring& name, const std::wstring& url) override;
+    void OnMeta(const std::wstring& text, const std::wstring& artist) override;
+    void OnStall() override;
+    void OnEnd() override;
+    void OnError(int errorCode) override;
 };

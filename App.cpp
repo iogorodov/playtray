@@ -67,13 +67,70 @@ App::App(HINSTANCE instance) :
     if (!wnd)
         return;
 
-    if (!_trayIcon.CreateIcon(instance, wnd))
+    if (!_trayIcon.Init(instance, wnd))
         return;
 
     _config.Read();
     _player.Init(wnd);
 
     _instance = instance;
+}
+
+bool App::AddMenuItem(HMENU menu, UINT position, UINT id, LPWSTR title, BOOL disabled, BOOL checked)
+{
+    MENUITEMINFOW mi;
+    mi.cbSize = sizeof(MENUITEMINFOW);
+    mi.fMask = MIIM_FTYPE | MIIM_ID | MIIM_STATE | MIIM_STRING;
+    mi.fType = MFT_STRING;
+    mi.fState = disabled ? MFS_DISABLED : (checked ? MFS_DEFAULT : MFS_ENABLED);
+    mi.wID = id;
+    mi.dwTypeData = title;
+    mi.cch = wcslen(title);
+
+    if (!InsertMenuItemW(menu, position, TRUE, &mi))
+        return false;
+
+    return true;
+}
+
+bool App::ShowTrayMenu(HWND wnd)
+{
+    HMENU menu = LoadMenu(_instance, MAKEINTRESOURCE(IDC_RADIOTRAY));
+    if (!menu)
+        return false;
+
+    HMENU subMenu = GetSubMenu(menu, 0);
+    if (!subMenu) {
+        DestroyMenu(menu);
+        return false;
+    }
+
+    if (_config.GetItems().empty())
+    {
+        WCHAR noConfigStr[MAX_LOADSTRING];
+        LoadStringW(_instance, IDS_NO_CONFIG, noConfigStr, MAX_LOADSTRING);
+
+        AddMenuItem(subMenu, 0, 0, noConfigStr, true, false);
+    }
+    else
+    {
+        UINT position = 0;
+        for (auto& it : _config.GetItems())
+        {
+            AddMenuItem(subMenu, position, IDM_MENU_ITEM + position, (LPWSTR)it.c_str(), false, position == _config.GetCurrentIndex());
+            position += 1;
+        }
+    }
+
+    POINT clickPoint;
+    GetCursorPos(&clickPoint);
+
+    SetForegroundWindow(wnd);
+    TrackPopupMenu(subMenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_BOTTOMALIGN, clickPoint.x, clickPoint.y, 0, wnd, NULL);
+    SendMessage(wnd, WM_NULL, 0, 0);
+
+    DestroyMenu(menu);
+    return true;
 }
 
 int App::Run()
@@ -96,7 +153,7 @@ long App::WndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     if (message == WM_TASKBAR_CREATE)
     {
-        if (!_trayIcon.CreateIcon(_instance, wnd))
+        if (!_trayIcon.Init(_instance, wnd))
             return -1;
     }
 
@@ -148,59 +205,35 @@ long App::WndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
     return 0;
 }
 
-bool App::AddMenuItem(HMENU menu, UINT position, UINT id, LPWSTR title, BOOL disabled, BOOL checked)
+void App::OnBuffer(int percent)
 {
-    MENUITEMINFOW mi;
-    mi.cbSize = sizeof(MENUITEMINFOW);
-    mi.fMask = MIIM_FTYPE | MIIM_ID | MIIM_STATE | MIIM_STRING;
-    mi.fType = MFT_STRING;
-    mi.fState = disabled ? MFS_DISABLED : (checked ? MFS_DEFAULT : MFS_ENABLED);
-    mi.wID = id;
-    mi.dwTypeData = title;
-    mi.cch = wcslen(title);
-    
-    if (!InsertMenuItemW(menu, position, TRUE, &mi))
-        return false;
 
-    return true;
 }
 
-bool App::ShowTrayMenu(HWND wnd)
+void App::OnPlay(const std::wstring& name, const std::wstring& url)
 {
-    HMENU menu = LoadMenu(_instance, MAKEINTRESOURCE(IDC_RADIOTRAY));
-    if (!menu)
-        return false;
-
-    HMENU subMenu = GetSubMenu(menu, 0);
-    if (!subMenu) {
-        DestroyMenu(menu);
-        return false;
-    }
-
-    if (_config.GetItems().empty())
-    {
-        WCHAR noConfigStr[MAX_LOADSTRING];
-        LoadStringW(_instance, IDS_NO_CONFIG, noConfigStr, MAX_LOADSTRING);
-
-        AddMenuItem(subMenu, 0, 0, noConfigStr, true, false);
-    }
-    else
-    {
-        UINT position = 0;
-        for (auto& it : _config.GetItems())
-        {
-            AddMenuItem(subMenu, position, IDM_MENU_ITEM + position, (LPWSTR)it.c_str(), false, position == _config.GetCurrentIndex());
-            position += 1;
-        }
-    }
-
-    POINT clickPoint;
-    GetCursorPos(&clickPoint);
-
-    SetForegroundWindow(wnd);
-    TrackPopupMenu(subMenu, TPM_LEFTALIGN | TPM_LEFTBUTTON | TPM_BOTTOMALIGN, clickPoint.x, clickPoint.y, 0, wnd, NULL);
-    SendMessage(wnd, WM_NULL, 0, 0);
-
-    DestroyMenu(menu);
-    return true;
+    _trayIcon.SetStopIcon(url);
 }
+
+void App::OnMeta(const std::wstring& text, const std::wstring& artist)
+{
+    _trayIcon.SetStopIcon(text);
+}
+
+void App::OnStall()
+{
+
+}
+
+void App::OnEnd()
+{
+    std::wstring empty;
+    _trayIcon.SetPlayIcon(empty);
+}
+
+void App::OnError(int errorCode)
+{
+    std::wstring empty;
+    _trayIcon.SetErrorIcon(empty);
+}
+

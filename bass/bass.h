@@ -691,7 +691,7 @@ RETURN : TRUE = continue recording, FALSE = stop */
 // ID3v1 tag structure
 typedef struct {
 	char id[3];
-	char title[30];
+	char text[30];
 	char artist[30];
 	char album[30];
 	char year[4];

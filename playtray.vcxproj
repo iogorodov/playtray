@@ -174,8 +174,14 @@
     <ClCompile Include="TrayIcon.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <Image Include="resources\error.ico" />
+    <Image Include="resources\loading_01.ico" />
+    <Image Include="resources\loading_02.ico" />
+    <Image Include="resources\loading_03.ico" />
+    <Image Include="resources\loading_04.ico" />
     <Image Include="resources\play.ico" />
     <Image Include="resources\playtray.ico" />
+    <Image Include="resources\stop.ico" />
   </ItemGroup>
   <ItemGroup>
     <ResourceCompile Include="resources\playtray.rc" />

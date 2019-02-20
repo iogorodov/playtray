@@ -31,7 +31,7 @@ public:
     void RemoveIcon();
 
     void SetPlayIcon(const std::wstring& title);
-    void SetStopIcon(const std::wstring& text, const std::wstring& artist);
+    void SetStopIcon(const std::wstring& text);
     void SetErrorIcon(const std::wstring& text);
     void SetLoading(int percent);
 };

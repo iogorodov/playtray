@@ -1,7 +1,19 @@
 #include "stdafx.h"
 #include "TrayIcon.h"
 
-#define ICONS_IDS { IDI_PLAY, IDC_STOP, IDC_ERROR, IDC_LOADING_01, IDC_LOADING_02, IDC_LOADING_03, IDC_LOADING_04 }
+#define MAX_LOADSTRING 128
+#define ICONS_IDS { IDI_PLAY, IDI_STOP, IDI_ERROR, IDI_LOADING_01, IDI_LOADING_02, IDI_LOADING_03, IDI_LOADING_04 }
+
+std::wstring LoadStringFromResource(UINT id, HINSTANCE instance = NULL)
+{
+    WCHAR* buffer = NULL;
+    int len = LoadStringW(instance, id, reinterpret_cast<LPWSTR>(&buffer), 0);
+
+    if (len)
+        return std::wstring(buffer, len);
+    else
+        return std::wstring();
+}
 
 TrayIcon::TrayIcon(UINT iconUid, UINT messageId) :
     _iconUid(iconUid),
@@ -10,6 +22,7 @@ TrayIcon::TrayIcon(UINT iconUid, UINT messageId) :
     _state(PLAY_ICON),
     _phase(0)
 {
+    _tooltip = LoadStringFromResource(IDS_APP_TITLE);
 }
 
 TrayIcon::~TrayIcon()
@@ -44,17 +57,43 @@ bool TrayIcon::SetIcon(State state, int phase, const std::wstring& tooltip, bool
         nid.hWnd = _wnd;
         nid.uID = _iconUid;
         nid.uFlags = NIF_ICON | NIF_MESSAGE | NIF_TIP;
-        wcscpy_s(nid.szTip, L"");
+        wcscpy_s(nid.szTip, tooltip.c_str());
         nid.hIcon = GetIcon(state, phase);
         nid.uCallbackMessage = _messageId;
 
         if (!Shell_NotifyIcon(NIM_ADD, &nid))
             return false;
+    }
+    else if (state != _state || (_state == LOADING_ICON && phase != _phase))
+    {
+        NOTIFYICONDATA nid;
+        nid.cbSize = sizeof(NOTIFYICONDATA);
+        nid.hWnd = _wnd;
+        nid.uID = _iconUid;
+        nid.uFlags = NIF_ICON | NIF_TIP;
+        wcscpy_s(nid.szTip, tooltip.c_str());
+        nid.hIcon = GetIcon(state, phase);
 
-        return true;
+        if (!Shell_NotifyIcon(NIM_MODIFY, &nid))
+            return false;
+    }
+    else
+    {
+        NOTIFYICONDATA nid;
+        nid.cbSize = sizeof(NOTIFYICONDATA);
+        nid.hWnd = _wnd;
+        nid.uID = _iconUid;
+        nid.uFlags = NIF_TIP;
+        wcscpy_s(nid.szTip, tooltip.c_str());
+
+        if (!Shell_NotifyIcon(NIM_MODIFY, &nid))
+            return false;
     }
 
-    
+    _state = state;
+    _phase = phase;
+    _tooltip = tooltip;
+    return true;
 }
 
 bool TrayIcon::Init(HINSTANCE instance, HWND wnd)
@@ -62,12 +101,12 @@ bool TrayIcon::Init(HINSTANCE instance, HWND wnd)
     _wnd = wnd;
     WORD ids[] = ICONS_IDS;
 
-    for (int i = 0; i < ARRAYSIZE(_icons); ++i)
+    for (int i = 0; i < _ARRAYSIZE(_icons); ++i)
     {
         _icons[i] = LoadIcon(instance, (LPCTSTR)MAKEINTRESOURCE(ids[i]));
     }
 
-    SetIcon(_state, _phase, _tooltip, true);
+    return SetIcon(_state, _phase, _tooltip, true);
 }
 
 void TrayIcon::RemoveIcon()
@@ -86,22 +125,21 @@ void TrayIcon::RemoveIcon()
 
 void TrayIcon::SetPlayIcon(const std::wstring& title)
 {
-    _state = PLAY_ICON;
-    _tooltip = title;
+    SetIcon(PLAY_ICON, 0, title, false);
 }
 
-void TrayIcon::SetStopIcon(const std::wstring& text, const std::wstring& artist)
+void TrayIcon::SetStopIcon(const std::wstring& text)
 {
-    _state = STOP_ICON;
-    _tooltip = title;
+    SetIcon(STOP_ICON, 0, text, false);
 }
 
 void TrayIcon::SetErrorIcon(const std::wstring& text)
 {
-
+    SetIcon(ERROR_ICON, 0, text, false);
 }
 
 void TrayIcon::SetLoading(int percent)
 {
-
+    std::wstring empty;
+    SetIcon(LOADING_ICON, 0, empty, false);
 }
