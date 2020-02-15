@@ -30,6 +30,7 @@ private:
 
     ICallbacks* _callbacks;
 
+    HWND _wnd;
     CRITICAL_SECTION _lock;
     int _request;
     HSTREAM _stream;

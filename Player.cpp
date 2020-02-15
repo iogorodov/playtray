@@ -40,7 +40,8 @@ Player::Player(Player::ICallbacks* callbacks) :
     _callbacks(callbacks),
     _request(0),
     _stream(0),
-    _ready(false)
+    _ready(false),
+    _wnd(NULL)
 {
 }
 
@@ -52,6 +53,7 @@ Player::~Player()
 
 bool Player::Init(HWND wnd)
 {
+    _wnd = wnd;
     if (HIWORD(BASS_GetVersion()) != BASSVERSION)
     {
         _callbacks->OnError(BASS_ERROR_VERSION);
@@ -61,7 +63,7 @@ bool Player::Init(HWND wnd)
     BASS_SetConfig(BASS_CONFIG_NET_PLAYLIST, 1); // enable playlist processing
     BASS_SetConfig(BASS_CONFIG_NET_PREBUF_WAIT, 0); // disable BASS_StreamCreateURL pre-buffering
 
-    if (!BASS_Init(-1, 44100, 0, wnd, NULL))
+    if (!BASS_Init(-1, 44100, 0, _wnd, NULL))
     {
         _callbacks->OnError(BASS_ErrorGetCode());
         return false;
@@ -104,8 +106,15 @@ void Player::OpenUrl(const std::wstring& url)
 
     BASS_StreamFree(_stream);
 
-    // Connecting
+    // Reset output device to default. Hust to be sure
+    BASS_Free();
+    if (!BASS_Init(-1, 44100, 0, _wnd, NULL))
+    {
+        _callbacks->OnError(BASS_ErrorGetCode());
+        return;
+    }
 
+    // Connecting
     HSTREAM stream = BASS_StreamCreateURL((WCHAR*)url.c_str(), 0, BASS_STREAM_BLOCK | BASS_STREAM_STATUS | BASS_STREAM_AUTOFREE, Player::StaticStatusProc, this);
 
     EnterCriticalSection(&_lock);
@@ -131,7 +140,6 @@ void Player::OpenUrl(const std::wstring& url)
         BASS_ChannelSetSync(_stream, BASS_SYNC_HLS_SEGMENT, 0, Player::StaticMetaSync, this); // HLS
 
         BASS_ChannelSetSync(_stream, BASS_SYNC_STALL, 0, Player::StaticStallSync, this);
-
         BASS_ChannelSetSync(_stream, BASS_SYNC_END, 0, Player::StaticEndSync, this);
 
         BASS_ChannelPlay(_stream, FALSE);
@@ -144,7 +152,8 @@ void Player::ProcessMeta()
 
     const char *meta = BASS_ChannelGetTags(_stream, BASS_TAG_META);
     if (meta) 
-    { // got Shoutcast metadata
+    { 
+        // got Shoutcast metadata
         std::wstring_convert<std::codecvt_utf8<wchar_t>> converter;
         const char *p = strstr(meta, "StreamTitle='"); // locate the title
         if (p) 
@@ -164,18 +173,21 @@ void Player::ProcessMeta()
         std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
         meta = BASS_ChannelGetTags(_stream, BASS_TAG_OGG);
         if (meta) 
-        { // got Icecast/OGG tags
+        { 
+            // got Icecast/OGG tags
             const char *p = meta;
             std::wstring title;
             std::wstring artist;
             for (; *p; p += strlen(p) + 1) 
             {
                 if (!_strnicmp(p, "artist=", 7))
-                { // found the artist
+                { 
+                    // found the artist
                     artist = converter.from_bytes(p + 7);
                 }
                 if (!_strnicmp(p, "title=", 6))
-                { // found the title
+                { 
+                    // found the title
                     title = converter.from_bytes(p + 6);
                 }
             }
@@ -189,7 +201,8 @@ void Player::ProcessMeta()
             std::wstring_convert<std::codecvt_utf8_utf16<wchar_t>> converter;
             meta = BASS_ChannelGetTags(_stream, BASS_TAG_HLS_EXTINF);
             if (meta) 
-            { // got HLS segment info
+            { 
+                // got HLS segment info
                 const char *p = strchr(meta, ',');
                 if (p)
                 {
