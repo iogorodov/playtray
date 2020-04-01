@@ -173,6 +173,15 @@ void Player::Stop()
 {
     if (_stream)
         BASS_StreamFree(_stream);
+
+    // Reset output device to default. Just to be sure
+    BASS_Free();
+    if (!BASS_Init(-1, 44100, 0, _wnd, NULL))
+    {
+        _callbacks->OnError(BASS_ErrorGetCode());
+        return;
+    }
+
     _callbacks->OnEnd();
     _stream = 0;
     _files.clear();
@@ -185,14 +194,6 @@ void Player::OpenUrl(const std::wstring& url)
     EnterCriticalSection(&_lock);
     int request = ++_request;
     LeaveCriticalSection(&_lock);
-
-    // Reset output device to default. Just to be sure
-    BASS_Free();
-    if (!BASS_Init(-1, 44100, 0, _wnd, NULL))
-    {
-        _callbacks->OnError(BASS_ErrorGetCode());
-        return;
-    }
 
     // Connecting
     HSTREAM stream = BASS_StreamCreateURL((WCHAR*)url.c_str(), 0, BASS_STREAM_BLOCK | BASS_STREAM_STATUS | BASS_STREAM_AUTOFREE, Player::StaticStatusProc, this);
@@ -341,14 +342,6 @@ void Player::PlayFile()
 {
     if (_filesIndex < 0 || _filesIndex >= _files.size())
         return;
-
-    // Reset output device to default. Just to be sure
-    BASS_Free();
-    if (!BASS_Init(-1, 44100, 0, _wnd, NULL))
-    {
-        _callbacks->OnError(BASS_ErrorGetCode());
-        return;
-    }
 
     _stream = BASS_StreamCreateFile(FALSE, (WCHAR*)_files[_filesIndex].c_str(), 0, 0, BASS_ASYNCFILE | BASS_UNICODE | BASS_STREAM_AUTOFREE);
 
