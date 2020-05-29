@@ -17,6 +17,7 @@
 #include <windows.h>
 #include <CommCtrl.h>
 #include <shellapi.h>
+#include <shellscalingapi.h>
 
 // C RunTime Header Files
 #include <stdlib.h>

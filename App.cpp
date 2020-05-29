@@ -17,10 +17,10 @@ LRESULT CALLBACK App::StaticWndProc(HWND wnd, UINT message, WPARAM wParam, LPARA
 {
     if (message == WM_NCCREATE)
     {
-        SetWindowLong(wnd, GWL_USERDATA, (long)((LPCREATESTRUCT(lParam))->lpCreateParams));
+        SetWindowLongPtr(wnd, GWLP_USERDATA, (LONG_PTR)(LPCREATESTRUCT(lParam))->lpCreateParams);
     }
 
-    App* app = (App*)GetWindowLong(wnd, GWL_USERDATA);
+    App* app = (App*)GetWindowLongPtr(wnd, GWLP_USERDATA);
 
     if (app)
         return app->WndProc(wnd, message, wParam, lParam);
@@ -63,11 +63,12 @@ App::App(HINSTANCE instance) :
     if (!RegisterClassExW(&wcex))
         return;
 
+    SetProcessDpiAwareness(PROCESS_PER_MONITOR_DPI_AWARE);
 
     HWND wnd = CreateWindowExW(WS_EX_CLIENTEDGE, WINDOW_CLASS, titleStr, WS_OVERLAPPEDWINDOW,
         CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, CW_USEDEFAULT, nullptr, nullptr, instance, (LPVOID)this);
 
-    if (!wnd)
+    if (!wnd) 
         return;
 
     if (!_trayIcon.Init(instance, wnd))
@@ -101,7 +102,7 @@ bool App::AddMenuItem(HMENU menu, UINT position, UINT id, LPWSTR title, BOOL dis
 
 bool App::ShowTrayMenu(HWND wnd)
 {
-    HMENU menu = LoadMenu(_instance, MAKEINTRESOURCE(IDC_RADIOTRAY));
+    HMENU menu = LoadMenuW(_instance, MAKEINTRESOURCE(IDC_RADIOTRAY));
     if (!menu)
         return false;
 
@@ -170,7 +171,7 @@ int App::Run()
     return (int)msg.wParam;
 }
 
-long App::WndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
+LRESULT App::WndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
 {
     if (message == WM_TASKBAR_CREATE)
     {
@@ -205,11 +206,13 @@ long App::WndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
                     }
                 }
             }
-        break;
+            break;
+
         case WM_TIMER:
             if (!_player.Update())
                 _trayIcon.UpdateLoading();
             break;
+
         case WM_USER_SHELLICON:
             switch (LOWORD(lParam))
             {
@@ -241,6 +244,7 @@ long App::WndProc(HWND wnd, UINT message, WPARAM wParam, LPARAM lParam)
             _trayIcon.RemoveIcon();
             PostQuitMessage(0);
             break;
+
         default:
             return DefWindowProc(wnd, message, wParam, lParam);
     }
